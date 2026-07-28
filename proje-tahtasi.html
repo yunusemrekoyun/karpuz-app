@@ -1,0 +1,653 @@
+<title>Karpuz App — Proje Tahtası</title>
+
+<style>
+  :root {
+    --bg: #FFFFFF; --bg2: #FAFAFA; --bg3: #F5F5F5;
+    --fg: #000000; --muted: #707070;
+    --hairline: rgba(0,0,0,.15); --outline: #D5D5D5;
+    --grid: rgba(0,0,0,.055);
+    --zone: rgba(0,0,0,.028);
+    --ok: #0F9D63; --kismi: #B26A00; --tasarim: #0072C6;
+    --risk: #D62839; --kilit: #5B4FC4; --yok: #9A9A9A;
+    --ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101010; --bg2: #0A0A0A; --bg3: #1E1E1E;
+      --fg: #F3F5F7; --muted: #8C8C8C;
+      --hairline: rgba(243,245,247,.15); --outline: #2D2D2D;
+      --grid: rgba(243,245,247,.045); --zone: rgba(243,245,247,.03);
+      --ok: #20C584; --kismi: #E8A33D; --tasarim: #18A3FE;
+      --risk: #FF3040; --kilit: #9B8CFF; --yok: #6B6B6B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#101010; --bg2:#0A0A0A; --bg3:#1E1E1E; --fg:#F3F5F7; --muted:#8C8C8C;
+    --hairline:rgba(243,245,247,.15); --outline:#2D2D2D; --grid:rgba(243,245,247,.045);
+    --zone:rgba(243,245,247,.03); --ok:#20C584; --kismi:#E8A33D; --tasarim:#18A3FE;
+    --risk:#FF3040; --kilit:#9B8CFF; --yok:#6B6B6B;
+  }
+  :root[data-theme="light"] {
+    --bg:#FFFFFF; --bg2:#FAFAFA; --bg3:#F5F5F5; --fg:#000000; --muted:#707070;
+    --hairline:rgba(0,0,0,.15); --outline:#D5D5D5; --grid:rgba(0,0,0,.055);
+    --zone:rgba(0,0,0,.028); --ok:#0F9D63; --kismi:#B26A00; --tasarim:#0072C6;
+    --risk:#D62839; --kilit:#5B4FC4; --yok:#9A9A9A;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--bg2); color: var(--fg); font-family: var(--ui); font-size: 15px; -webkit-font-smoothing: antialiased; }
+
+  /* ── Üst bar ─────────────────────────────────────────── */
+  .bar {
+    position: fixed; inset: 0 0 auto 0; z-index: 30; height: 56px;
+    display: flex; align-items: center; gap: 14px; padding: 0 16px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .brand { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .brand b { font-size: 14px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+  .brand span { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .06em; white-space: nowrap; }
+  .bar .spacer { flex: 1; }
+  .btn {
+    font-family: var(--mono); font-size: 11px; color: var(--fg);
+    background: var(--bg3); border: 1px solid var(--hairline);
+    border-radius: 12px; padding: 7px 10px; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg); }
+  .btn:focus-visible { outline: 2px solid var(--tasarim); outline-offset: 2px; }
+  select.btn { appearance: none; padding-right: 24px; }
+  .zoomctl { display: flex; gap: 4px; align-items: center; }
+  .zoomctl .lvl { font-family: var(--mono); font-size: 11px; color: var(--muted); width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
+  @media (max-width: 720px) { .hide-sm { display: none; } }
+
+  /* ── Tuval ───────────────────────────────────────────── */
+  #stage {
+    position: fixed; inset: 56px 0 0 0; overflow: hidden;
+    cursor: grab; touch-action: none;
+    background-color: var(--bg2);
+    background-image: radial-gradient(var(--grid) 1.2px, transparent 1.2px);
+    background-size: 28px 28px;
+  }
+  #stage.grabbing { cursor: grabbing; }
+  #canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+  #wires { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+
+  /* ── Bölgeler ────────────────────────────────────────── */
+  .zone {
+    position: absolute; border: 1px dashed var(--outline);
+    border-radius: 16px; background: var(--zone);
+  }
+  .zone > .zt {
+    position: absolute; top: -11px; left: 20px;
+    background: var(--bg2); padding: 0 10px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--muted); white-space: nowrap;
+  }
+
+  /* ── Düğümler ────────────────────────────────────────── */
+  .n {
+    --sc: var(--yok);
+    position: absolute; box-sizing: border-box;
+    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--sc) 42%, var(--hairline));
+    border-radius: 12px; padding: 11px 13px;
+    display: flex; flex-direction: column; gap: 4px;
+    cursor: pointer; text-align: left; font: inherit; color: inherit;
+    overflow: hidden;
+  }
+  .n:hover { border-color: var(--sc); }
+  .n:focus-visible { outline: 2px solid var(--tasarim); outline-offset: 2px; }
+  .n .t {
+    font-size: 13.5px; font-weight: 600; line-height: 1.3;
+    display: flex; align-items: baseline; gap: 7px;
+  }
+  .n .t::before {
+    content: ""; flex: 0 0 auto; width: 7px; height: 7px;
+    border-radius: 999px; background: var(--sc); transform: translateY(-1px);
+  }
+  .n .d {
+    font-size: 12px; color: var(--muted); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .n.s-ok     { --sc: var(--ok); }
+  .n.s-kismi  { --sc: var(--kismi); }
+  .n.s-yok    { --sc: var(--yok); }
+  .n.s-tasarim{ --sc: var(--tasarim); }
+  .n.s-risk   { --sc: var(--risk); }
+  .n.s-kilit  { --sc: var(--kilit); }
+  .n.dim { opacity: .28; }
+  .n.hot { border-color: var(--fg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tasarim) 22%, transparent); }
+
+  /* ── Çekmece ─────────────────────────────────────────── */
+  #drawer {
+    position: fixed; z-index: 40; top: 56px; right: 0; bottom: 0; width: min(420px, 92vw);
+    background: var(--bg); border-left: 1px solid var(--hairline);
+    padding: 22px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+    transform: translateX(101%);
+  }
+  #drawer.open { transform: none; }
+  @media (prefers-reduced-motion: no-preference) { #drawer { transition: transform .18s cubic-bezier(.25,1,.5,1); } }
+  #drawer h3 { margin: 0; font-size: 19px; line-height: 1.25; font-weight: 700; letter-spacing: -.01em; }
+  #drawer .body { font-size: 14px; line-height: 1.6; color: var(--fg); }
+  #drawer .body p { margin: 0 0 10px; }
+  #drawer .body p:last-child { margin-bottom: 0; }
+  #drawer .meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  #drawer code { font-family: var(--mono); font-size: 12.5px; background: var(--bg3); padding: 2px 7px; border-radius: 999px; }
+  #dclose { align-self: flex-end; }
+
+  /* ── Rozet ───────────────────────────────────────────── */
+  .b {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 10.5px; line-height: 1;
+    padding: 5px 8px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid currentColor;
+  }
+  .b::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .b-ok{color:var(--ok)} .b-kismi{color:var(--kismi)} .b-yok{color:var(--yok)}
+  .b-tasarim{color:var(--tasarim)} .b-risk{color:var(--risk)} .b-kilit{color:var(--kilit)}
+
+  /* ── Alt lejant ──────────────────────────────────────── */
+  .legend {
+    position: fixed; z-index: 20; left: 16px; bottom: 16px;
+    display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100vw - 32px);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--hairline); border-radius: 12px; padding: 9px 11px;
+  }
+  .hint {
+    position: fixed; z-index: 20; right: 16px; bottom: 16px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 10px;
+  }
+  @media (max-width: 720px) { .hint { display: none; } }
+</style>
+
+<div class="bar">
+  <div class="brand">
+    <b>Karpuz App — Proje Tahtası</b>
+    <span id="stamp">28 TEMMUZ 2026</span>
+  </div>
+  <div class="spacer"></div>
+  <select class="btn" id="jump" aria-label="Bölgeye git">
+    <option value="">Bölgeye git…</option>
+  </select>
+  <div class="zoomctl">
+    <button class="btn" id="zout" aria-label="Uzaklaş">−</button>
+    <span class="lvl" id="lvl">100%</span>
+    <button class="btn" id="zin" aria-label="Yakınlaş">+</button>
+    <button class="btn hide-sm" id="zfit">Sığdır</button>
+  </div>
+</div>
+
+<div id="stage">
+  <div id="canvas">
+    <svg id="wires" aria-hidden="true"></svg>
+  </div>
+</div>
+
+<div class="legend" id="legend"></div>
+<div class="hint">sürükle · tekerlek yakınlaştırır · kutuya tıkla</div>
+
+<aside id="drawer" aria-live="polite">
+  <button class="btn" id="dclose">Kapat</button>
+  <h3 id="dtitle"></h3>
+  <div class="meta" id="dmeta"></div>
+  <div class="body" id="dbody"></div>
+</aside>
+
+<script>
+(() => {
+  "use strict";
+
+  const S = {
+    ok:      { label: "Çalışıyor",   cls: "ok" },
+    kismi:   { label: "Kısmi",       cls: "kismi" },
+    yok:     { label: "Yapılmadı",   cls: "yok" },
+    tasarim: { label: "Tasarımda",   cls: "tasarim" },
+    risk:    { label: "Açık / risk", cls: "risk" },
+    kilit:   { label: "Kilitli karar", cls: "kilit" },
+  };
+
+  // ── Bölgeler ──────────────────────────────────────────
+  const ZONES = [
+    { id: "yol",  t: "Yol haritası",                x:   60, y:   60, w: 3300, h:  190, cols: 8 },
+    { id: "ses",  t: "Ses hattı — ön işleme",       x:   60, y:  330, w: 1120, h:  400, cols: 2 },
+    { id: "oz",   t: "Öznitelik kararları",          x: 1240, y:  330, w: 1120, h:  400, cols: 2 },
+    { id: "mdl",  t: "Model & sınıflandırma",        x: 2420, y:  330, w:  940, h:  290, cols: 2 },
+    { id: "veri", t: "Veri seti",                    x: 2420, y:  670, w:  940, h:  290, cols: 2 },
+    { id: "urun", t: "Uygulama",                     x:   60, y:  790, w: 1120, h:  290, cols: 2 },
+    { id: "kar",  t: "Kararlar & çalışma ilkeleri",  x: 1240, y:  790, w: 1120, h:  400, cols: 2 },
+    { id: "risk", t: "Açık riskler",                 x: 2420, y: 1010, w:  940, h:  400, cols: 2 },
+  ];
+
+  // ── Düğümler ──────────────────────────────────────────
+  const N = (id, zone, s, t, d, body) => ({ id, zone, s, t, d, body });
+  const NODES = [
+    // ---- Yol haritası ----
+    N("f0","yol","kismi","Faz 0 — Kurulum","Repo ve kurallar hazır; Expo iskeleti ve ham kayıt yok.",
+      "<p>Yapıldı: git deposu, dört branch (<code>main</code> · yunus · ismail · rumeysa), README çalışma kuralları, kapsam dokümanı, bu tahta.</p><p>Yapılmadı: Expo/RN projesi, mikrofon izni akışı, telefondan ham ses örneği alıp diziye çıkarma.</p><p><strong>Bitti sayılır:</strong> gerçek cihazda kayıt alınıp örnek dizisi eline geldiğinde.</p>"),
+    N("f1","yol","yok","Faz 1 — Ön işleme","Gürültüden vuruşu ayırma. RMS, eşik, çerçeve, filtre.",
+      "<p>Projenin en kritik fazı. Buradan yanlış çerçeve çıkarsa sonraki her şey yanlış hesaplanır — model iyi görünüp sahada tutmaz.</p><p><strong>Bitti sayılır:</strong> gürültü içinden vuruş çerçeveleri doğru ayrılıyor, vuruş olmayan ses (konuşma, çarpma, rüzgâr) reddediliyor.</p>"),
+    N("f2","yol","yok","Faz 2 — Öznitelik","ZCR · STE · alt-bant STE oranı.",
+      "<p>Her vuruş çerçevesi için sabit uzunlukta bir öznitelik vektörü üretilir. Hangi özniteliklerin kullanılacağı <strong>kilitli</strong> — sağdaki öznitelik bölgesine bak.</p><p><strong>Bitti sayılır:</strong> aynı ses dosyası için hesaplanan değerler bağımsız bir referans hesapla tutarlı.</p>"),
+    N("f3","yol","yok","Faz 3 — Veri toplama","Olgun ve ham karpuzdan etiketli kayıt.",
+      "<p>Makalede eğitim 10 olgun + 10 ham, test 15 olgun + 25 ham karpuz. Bizim setimiz en az bu ölçekte olmalı.</p><p>Bu faz kod işi değil <strong>saha işi</strong>: karpuz bulmak, vurmak, kesip doğrulamak, etiketlemek.</p>"),
+    N("f4","yol","yok","Faz 4 — Model","Lineer SVM eğitimi, ağırlıkların gömülmesi.",
+      "<p>Eğitim bilgisayarda yapılır, telefona yalnız çıkarım gider. <strong>Bitti sayılır:</strong> ayrılmış test setinde doğruluk, precision ve recall raporlandığında.</p>"),
+    N("f5","yol","yok","Faz 5 — Arayüz","Üç ekran: ortam ölçümü → kayıt → sonuç.",
+      "<p>Model çalışır hâle gelmeden arayüz cilalanmaz. Önce doğru cevap, sonra güzel ekran.</p>"),
+    N("f6","yol","yok","Faz 6 — Geri bildirim","&quot;Sonuç doğru muydu?&quot; · veri toplama döngüsü.",
+      "<p>Kullanıcı sonucu onaylar veya düzeltir; açık rızayla kayıt + etiket toplanır ve sonraki model sürümüne katılır.</p><p><strong>Sınır:</strong> ses, etiket ve cihaz modeli dışında hiçbir şey toplanmaz. Konum yok, hesap yok, kimlik yok.</p>"),
+    N("f7","yol","yok","Faz 7 — Yayına hazırlık","Metinler, izin açıklamaları, gizlilik, mağaza.",
+      "<p>En son faz. Mikrofon izni açıklaması ve veri toplama rızası metni burada yazılır — Faz 6'nın hukuki karşılığı.</p>"),
+
+    // ---- Ses hattı ----
+    N("s-kayit","ses","kilit","Kayıt formatı","Mono · 16 bit · 44.1 kHz.",
+      "<p>Makaledeki format birebir alınır. Örnekleme hızını düşürmek cazip görünür ama vuruş sesinin ayırt edici enerjisi yüksek frekanslarda da var; 44.1 kHz'de kalınır.</p><p>Mono yeterli — tek mikrofon, tek kaynak.</p>"),
+    N("s-rms","ses","kilit","RMS penceresi — 1 ms","44 örnek. Örtüşmeli pencere yok.",
+      "<p>Pencere yeterince kısa olmalı ki vuruşun başı sonu doğru bulunsun, yeterince uzun olmalı ki tanınabilir bir sinyal içersin. Makale 1 ms'de karar kılmış.</p><p><strong>Örtüşmeli (overlapping) pencere kullanılmıyor</strong> — daha hassas olurdu ama telefonda hesap yükü ve pil tüketimi artar. Bilinçli takas.</p>"),
+    N("s-esik","ses","kilit","Dinamik eşik","2 sn ortam gürültüsü ölçülür, RMS'in 5 katı eşik olur.",
+      "<p>Sabit eşik olmaz: pazar yeri ile mutfak arasındaki gürültü farkı devasa, üstelik her telefonun mikrofon kazancı başka.</p><p>Bu yüzden uygulama açılışta 2 saniye ortamı dinler. Kullanıcıya &quot;bekle&quot; demek zorunda kalmamızın sebebi bu — arayüzde açıkça anlatılacak.</p>"),
+    N("s-cerceve","ses","kilit","Vuruş çerçevesi","1500–2500 örnek (~34–57 ms) arası kabul edilir.",
+      "<p>Eşiğin üstüne çıkış <em>başlangıç</em>, altına iniş <em>bitiş</em> noktasıdır. Aradaki sinyal aday vuruştur.</p><p>Makaledeki gözlem: vuruş sesi ~1800 örnek (41 ms) sürüyor. Bu aralığın dışına düşen her şey elenir — konuşma çok uzun, tıkırtı çok kısa.</p><p>Kısa ve birbirine yakın parçalar (her biri &lt;1000 örnek, arası &lt;500) tek olayda birleştirilir.</p>"),
+    N("s-filtre","ses","kilit","Butterworth alçak geçiren","2. derece, kesim = Nyquist / 2.",
+      "<p>Ortam gürültüsünün büyük kısmı frekans tayfının üst bölgesinde. Çerçeve ayrıldıktan sonra bu filtre kalan gürültüyü kırpar.</p><p>Yüksek dereceli filtre daha keskin keserdi ama gecikme ve hesap maliyeti getirir; 2. derece yeterli.</p>"),
+    N("s-red","ses","tasarim","Vuruş yok durumu","Hiçbir aday çerçeve kalmazsa kullanıcıya söylenir.",
+      "<p>Sessizce &quot;ham&quot; demek en kötü davranış olur — kullanıcı yanlış bilgiye güvenir.</p><p>Aday çerçeve bulunamazsa açık uyarı: &quot;vuruş algılanmadı, tekrar dene&quot;. Bu bir hata değil, normal bir sonuç.</p>"),
+
+    // ---- Öznitelikler ----
+    N("o-zcr","oz","kilit","ZCR — sıfır geçiş oranı","Kullanılıyor. Olgunda düşük, hamda yüksek.",
+      "<p>Sinyalin işaret değiştirme sayısı. Tek başına zayıf sınıflandırıcı (%59.6) ama vektörün içinde katkı veriyor.</p><p>Makaledeki ortalamalar — eğitim seti: olgun 0.0138, ham 0.0202.</p>"),
+    N("o-ste","oz","kilit","STE — kısa zamanlı enerji","Kullanılıyor. Olgunda düşük.",
+      "<p>Çerçevedeki örneklerin karelerinin toplamı. Hesabı ucuz, tek başına doğruluğu %64.6.</p><p>Asıl değeri alt-bant oranlarının paydası olması — onlar olmadan bu hesap zaten yapılıyor.</p>"),
+    N("o-alt","oz","kilit","Alt-bant STE oranı","Kullanılıyor: 1, 3 ve 4. En güçlü öznitelikler burada.",
+      "<p>Çerçeve dört banda bölünür: <code>[0,T/8]</code> · <code>[T/8,T/4]</code> · <code>[T/4,T/2]</code> · <code>[T/2,T]</code>. Her bandın enerjisinin toplam enerjiye oranı alınır.</p><p><strong>Ayırt eden davranış:</strong> ham karpuzda enerji ilk banda yığılır ve oran hızla düşer (%57–67 ilk bantta). Olgun karpuzda dağılım çok daha düz.</p><p>Tek başına doğruluk: bant 4 → %84.5 (en iyi), bant 1 → %82.7.</p>"),
+    N("o-parlak","oz","kilit","Brightness — ÇIKARILDI","Eğitim ve test setinde ters yönde davrandı.",
+      "<p>Spektral merkez. Makalede eğitim setinde olgun karpuzun brightness'ı <em>düşük</em> çıkmış (12.8 vs 17.5), test setinde ise tam tersi (23.8 vs 13.4).</p><p>Yön değiştiren öznitelik güvenilmezdir — tek başına doğruluğu zaten %47.5, yani yazı tura atmaktan kötü.</p><p><strong>Bu bir eksik değil, karar.</strong> Modeli iyileştirmek için geri eklenmesi önerilirse önce bu kutu okunur.</p>"),
+    N("o-alt2","oz","kilit","Alt-bant oranı 2 — ÇIKARILDI","Precision ve recall zayıf.",
+      "<p>Diğer üç bant dururken bu bant vektörden atıldı: tek başına doğruluğu %57.8 ve precision/recall dengesi kötü.</p><p>İlgisiz öznitelik eklemek modeli iyileştirmez, gürültü katar.</p>"),
+    N("o-mfcc","oz","kilit","MFCC & spektrogram — ÇIKARILDI","Mobilde hesap maliyeti yüksek.",
+      "<p>MFCC ses işlemenin en yaygın özniteliği ve konu açıldığında ilk akla gelen şey — bu yüzden ayrıca yazılıyor.</p><p>Makale bunları bilerek dışarıda bırakmış: telefonun hesap gücüne göre pahalılar. Referans olarak, yalnız MFCC ile çalışan bir MLP yaklaşımı <strong>%77</strong> doğruluk vermiş; bizim ucuz öznitelik vektörümüz %89.9.</p><p>Yani pahalı öznitelik burada daha iyi sonuç da vermiyor.</p>"),
+
+    // ---- Model ----
+    N("m-svm","mdl","kilit","Lineer SVM","Çekirdekli (nonlinear) SVM değil.",
+      "<p>Nonlinear SVM genelde daha iyi sonuç verir ama veriyi yüksek boyutlu uzaya taşıması gerekir — telefonda hem hesap hem bellek maliyeti.</p><p>KNN ve GMM de değerlendirildi; benzer işlerde SVM ikisini de geçiyor.</p>"),
+    N("m-gomulu","mdl","kilit","Telefonda eğitim yok","Ağırlıklar uygulamaya gömülür, yalnız çıkarım çalışır.",
+      "<p>Eğitim bilgisayarda, ayrı bir betikle yapılır. Uygulamanın taşıdığı tek şey birkaç sayıdan ibaret ağırlık vektörü.</p><p>Sonuç: çıkarım anlık, internet gerekmiyor, pil yakmıyor.</p>"),
+    N("m-oy","mdl","kilit","Çoğunluk oyu","Her vuruş ayrı sınıflandırılır, sonuç oylamayla.",
+      "<p>Tek vuruş yanıltabilir — kullanıcı kabuğun kalın yerine vurmuş olabilir. Kayıt boyunca yakalanan her vuruş çerçevesi ayrı sınıflandırılır, ekrana çoğunluk yazılır.</p><p>Bu yüzden arayüz kullanıcıyı <strong>birkaç kez vurmaya</strong> teşvik etmeli.</p>"),
+    N("m-metrik","mdl","tasarim","Başarı ölçütü","Referans %89.9. Kendi sayımızı kendimiz ölçeceğiz.",
+      "<p>Makalenin sonucu: genel %89.9, olgun %89.3, ham %90.4, recall %84.2, precision %79.1.</p><p>Bu bir <em>hedef</em> değil <em>referans</em>. Kendi setimizde çıkan sayı ne olursa onu yazacağız — makalenin sayısını kendi sonucumuz gibi göstermeyeceğiz.</p>"),
+
+    // ---- Veri seti ----
+    N("d-set","veri","yok","Eğitim ve test seti","En az 20 eğitim + 40 test karpuzu.",
+      "<p>Makaledeki ölçek: eğitim 10 olgun + 10 ham, test 15 olgun + 25 ham. Her karpuzdan birden çok vuruş kaydı alınır.</p><p>Eğitim ve test setleri <strong>farklı karpuzlardan</strong> gelmeli — aynı karpuzun iki vuruşu iki sete bölünürse sonuç şişer.</p>"),
+    N("d-etiket","veri","risk","Etiketleme — doğruluk nereden?","Olgunluğu bilmek için karpuzu kesmek gerekiyor.",
+      "<p>Açık soru. Modelin öğreneceği etiketin doğru olması şart, ama bir karpuzun gerçekten olgun olduğunu kesmeden bilemiyoruz.</p><p>Seçenekler: kesip görsel olarak karar vermek (makalenin yolu) · brikslik/şeker ölçümü · satıcının beyanı (en zayıfı).</p><p><strong>Karara bağlanmadan Faz 3 başlamaz.</strong> Yanlış etiketli veri, sonraki her fazı boşa çıkarır.</p>"),
+    N("d-repo","veri","kilit","Ham ses repoya girmez","Ses dosyaları ayrı depolanır, git'e konmaz.",
+      "<p><code>.gitignore</code> <code>*.wav</code>, <code>*.m4a</code>, <code>data/raw/</code> girişlerini kapsıyor.</p><p>Sebep pratik: ses dosyaları büyük ve ikili, git geçmişini şişirir, geri alınamaz. Veri seti ortak bir sürücüde tutulur.</p>"),
+    N("d-cihaz","veri","tasarim","Cihaz çeşitliliği","Set tek telefondan toplanırsa model o telefona öğrenir.",
+      "<p>Her mikrofonun kazancı ve frekans yanıtı farklı. Üç kişinin üç farklı telefonundan veri toplamak bu yüzden avantaj — hangi cihazla kaydedildiği etiketle birlikte tutulur.</p>"),
+
+    // ---- Uygulama ----
+    N("u-stack","urun","kilit","Expo + React Native","Tek kod tabanı, iki platform.",
+      "<p>Node 20+, pnpm. Karar gerekçesi basit: ekip React Native biliyor ve uygulama tek ekranlık bir araç, native'e inmeyi gerektirecek bir tarafı yok — <em>ses erişimi hariç</em>, ona bak: <strong>Ham PCM erişimi</strong> riski.</p>"),
+    N("u-akis","urun","tasarim","Üç ekran","Ortam ölçümü → kayıt → sonuç.",
+      "<p><strong>1 · Ortam ölçümü:</strong> 2 saniye, ilerleme göstergesiyle, ne olduğu yazılı.<br><strong>2 · Kayıt:</strong> dalga formu canlı çizilir, kullanıcı birkaç kez vurur.<br><strong>3 · Sonuç:</strong> olgun / ham + &quot;doğru muydu?&quot; sorusu.</p><p>Vuruş algılanmadıysa sonuç ekranı yerine uyarı çıkar.</p>"),
+    N("u-izin","urun","tasarim","Mikrofon izni","Bağlamla istenir, reddi düzgün karşılanır.",
+      "<p>Uygulama açılır açılmaz izin istenmez; kullanıcı &quot;başla&quot;ya bastığında istenir — o an ne işe yaradığı belli.</p><p>Reddedilirse çökme yok: ne olduğunu açıklayan ekran ve ayarlara gitme bağlantısı.</p>"),
+    N("u-cihaz","urun","kilit","Gerçek cihazda test","Simülatörde ses işi doğrulanmış sayılmaz.",
+      "<p>Simülatörün mikrofon girişi ana makinenin donanımını taklit ediyor; kazanç, gürültü tabanı ve gecikme gerçeği yansıtmıyor.</p><p><strong>Kural:</strong> ses hattına dokunan hiçbir iş &quot;simülatörde çalıştı&quot; diyerek kapatılmaz.</p>"),
+
+    // ---- Kararlar ----
+    N("k-calisma","kar","kilit","Önce konuş, sonra kod","Asla doğrudan koda başlanmaz.",
+      "<p>Sıra: konuşulur → fazlara bölünür → kararlar netleşir ve yazılır → kod yazılır.</p><p>Belirsiz nokta varsa varsayım üretilmez, sorulur. Gerekçesi netleşmemiş alana kod yazılmaz.</p>"),
+    N("k-tahta","kar","kilit","Tahta tek doğruluk kaynağı","Buradaki karar haber verilmeden değişmez.",
+      "<p>Herkesin tahtada tanımlı bir taskı var, kendi taskında ilerler. Tahtada olmayan özellik kendi kafasına göre eklenmez.</p><p>Daha iyi bir yol bulunduysa: önce söylenir, tartışılır, tahta güncellenir, sonra kod yazılır. <strong>AI ile tahta çelişirse tahta kazanır.</strong></p><p>Karar değişikliğini işleyen commit ayrı atılır.</p>"),
+    N("k-branch","kar","kilit","Branch düzeni","main + yunus · ismail · rumeysa. Herkes kendi dalında.",
+      "<p><code>main</code>'e doğrudan push yok, force push hiç yok. Başkasının branch'ine dokunulmaz.</p><p>main'e geçiş yalnız pull request ile ve en az bir kişi bakar.</p>"),
+    N("k-commit","kar","kilit","Commit dili","Net İngilizce, insan dili, AI izi yok.",
+      "<p>Emir kipi, küçük harf, sonda nokta yok, 50–72 karakter. <code>feat:</code> etiketi yok, emoji yok, yapay zekâ imza satırı yok.</p><p>Gerekçe kozmetik değil: kodu gönderen kişi sorumlu, dolayısıyla metin de onun olmalı.</p><p>Bir commit tek bir işi anlatır. Kör <code>git add .</code> yok — önce <code>git status</code> ve <code>git diff --staged</code>.</p>"),
+    N("k-sizinti","kar","kilit","Sızıntı denetimi","Demo olsa bile sır ve kişisel veri repoya girmez.",
+      "<p>Girmeyecekler: şifre, API anahtarı, token, sertifika, keystore, <code>.env</code> — <strong>.env.example dahil</strong>, şablon dosyası da koymuyoruz.</p><p>Ayrıca gerçek telefon, e-posta, adres, konum, sunucu IP'si, veritabanı bağlantı satırı.</p><p>Yanlışlıkla push edildiyse: önce anahtarı iptal et, sonra haber ver. Dosyayı silmek yetmez — git geçmişinde kalır.</p>"),
+    N("k-veri","kar","kilit","Toplanan veri sınırı","Ses, etiket, cihaz modeli. Başka hiçbir şey.",
+      "<p>Faz 6'daki geri bildirim döngüsünün sınırı bugünden konuyor: hesap yok, kimlik yok, konum yok, analitik yok.</p><p>Sonradan daraltmak zordur; baştan dar tutmak bedavadır.</p>"),
+
+    // ---- Riskler ----
+    N("r-pcm","risk","risk","Ham PCM erişimi","Projenin en büyük teknik belirsizliği.",
+      "<p>Expo'nun standart ses API'si kayıt yapmaya yarar — <strong>canlı örnek akışı</strong> vermek zorunda değil. Bizim RMS'i akış üzerinde hesaplamamız gerekiyor.</p><p>Çıkış yolları: dosyaya kaydedip sonradan çözümlemek (basit, gerçek zamanlı değil) · ham akış veren bir kütüphane · gerekirse native modül.</p><p><strong>Faz 0'ın kapısı bu.</strong> Hangi yolun tutacağı denenmeden Faz 1 planlanamaz.</p>"),
+    N("r-mikrofon","risk","risk","Mikrofon farklılığı","Her telefonun kazancı ve frekans yanıtı başka.",
+      "<p>Makalenin modelinde de aynı sorun var: toplanan sinyal karpuzun yanı sıra cihazın karakterini de taşıyor.</p><p>Kısmi savunma: eşiğin ortam ölçümüne göre <em>dinamik</em> olması ve alt-bant <em>oranlarının</em> mutlak enerji yerine göreli olması. Yine de sıfırlanmaz.</p>"),
+    N("r-gurultu","risk","risk","Saha gürültüsü","Pazar yeri laboratuvar değil.",
+      "<p>Makalenin kendi sayılarında bile fark görünüyor: sessiz ortamda vuruş tespiti %97–98, tarlada %91–93.</p><p>Uygulamanın kullanılacağı yer büyük ihtimalle pazar — yani kötü senaryo normal senaryo.</p>"),
+    N("r-kuvvet","risk","risk","Vuruş kuvveti kişiye göre değişiyor","Öznitelikler tamamen kuvvetten bağımsız değil.",
+      "<p>Alt-bant <em>oranları</em> toplam enerjiye bölündüğü için kuvvetten büyük ölçüde bağımsız — vektörün omurgası bu yüzden onlar.</p><p>Ama STE doğrudan kuvvete bağlı. Sert vuran biri sistematik olarak farklı ölçülür.</p>"),
+    N("r-veriaz","risk","risk","Veri seti küçük","20 + 40 karpuz, sınırlı genelleme.",
+      "<p>Karpuz çeşidi, boyut, kabuk kalınlığı, mevsim — hepsi sesi etkiliyor ve hiçbiri bu ölçekte temsil edilemiyor.</p><p>Faz 6'nın geri bildirim döngüsü tam olarak bu boşluğu kapatmak için var.</p>"),
+    N("r-beklenti","risk","risk","Beklenti yönetimi","%90 doğruluk, %100 değil.",
+      "<p>Uygulama on karpuzda bir yanılacak. Kullanıcıya kesin hüküm gibi sunulursa güven bir yanlışta gider.</p><p>Sonuç ekranının dili buna göre kurulacak — emin bir hüküm değil, bir tahmin.</p>"),
+  ];
+
+  // ── Bağlantılar ───────────────────────────────────────
+  const EDGES = [
+    ["f0","r-pcm","kapı"],
+    ["f1","s-esik",""],
+    ["f1","s-cerceve",""],
+    ["f2","o-alt","omurga"],
+    ["f3","d-etiket","kapı"],
+    ["f4","m-svm",""],
+    ["f5","u-akis",""],
+    ["f6","k-veri","sınır"],
+    ["f7","f6","rıza metni"],
+    ["s-kayit","s-rms",""],
+    ["s-rms","s-esik",""],
+    ["s-esik","s-cerceve",""],
+    ["s-cerceve","s-filtre",""],
+    ["s-cerceve","s-red",""],
+    ["s-filtre","o-ste",""],
+    ["o-ste","o-alt","payda"],
+    ["o-alt","m-svm",""],
+    ["o-zcr","m-svm",""],
+    ["o-parlak","m-metrik","güvenilmez"],
+    ["o-mfcc","m-svm","ucuz olan kazandı"],
+    ["m-svm","m-gomulu",""],
+    ["m-gomulu","m-oy",""],
+    ["m-oy","u-akis","birkaç kez vur"],
+    ["d-set","m-svm","eğitim"],
+    ["d-cihaz","r-mikrofon","kısmi savunma"],
+    ["d-repo","k-sizinti",""],
+    ["u-stack","r-pcm",""],
+    ["u-cihaz","r-gurultu",""],
+    ["u-izin","u-akis",""],
+    ["k-tahta","k-calisma",""],
+    ["k-commit","k-branch",""],
+    ["r-veriaz","f6","döngü kapatır"],
+    ["r-beklenti","m-metrik",""],
+    ["r-kuvvet","o-alt","oran bağımsız"],
+    ["s-esik","r-gurultu",""],
+  ];
+
+  // ── Yerleşim ──────────────────────────────────────────
+  const PAD = 34, GAP = 14, NH = 92, HEAD = 16;
+  const byId = new Map();
+  const zoneById = new Map(ZONES.map(z => [z.id, z]));
+
+  for (const z of ZONES) z._items = [];
+  for (const n of NODES) {
+    const z = zoneById.get(n.zone);
+    if (!z) continue;
+    z._items.push(n);
+  }
+  for (const z of ZONES) {
+    const inner = z.w - PAD * 2;
+    const nw = (inner - GAP * (z.cols - 1)) / z.cols;
+    z._items.forEach((n, i) => {
+      const c = i % z.cols, r = (i / z.cols) | 0;
+      n._x = z.x + PAD + c * (nw + GAP);
+      n._y = z.y + PAD + HEAD + r * (NH + GAP);
+      n._w = nw;
+      n._h = NH;
+      byId.set(n.id, n);
+    });
+  }
+
+  const W = Math.max(...ZONES.map(z => z.x + z.w)) + 60;
+  const H = Math.max(...ZONES.map(z => z.y + z.h)) + 60;
+
+  // ── Çizim ─────────────────────────────────────────────
+  const canvas = document.getElementById("canvas");
+  const wires = document.getElementById("wires");
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+  wires.setAttribute("width", W);
+  wires.setAttribute("height", H);
+  wires.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const defs = document.createElementNS(svgNS, "defs");
+  defs.innerHTML = `<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker>`;
+  wires.appendChild(defs);
+
+  for (const z of ZONES) {
+    const d = document.createElement("div");
+    d.className = "zone";
+    d.style.cssText = `left:${z.x}px;top:${z.y}px;width:${z.w}px;height:${z.h}px`;
+    d.innerHTML = `<span class="zt">${z.t}</span>`;
+    canvas.appendChild(d);
+  }
+
+  const elById = new Map();
+  for (const n of NODES) {
+    const b = document.createElement("button");
+    b.className = `n s-${n.s}`;
+    b.type = "button";
+    b.style.cssText = `left:${n._x}px;top:${n._y}px;width:${n._w}px;min-height:${n._h}px`;
+    b.innerHTML = `<span class="t"></span><span class="d"></span>`;
+    b.querySelector(".t").textContent = n.t;
+    b.querySelector(".d").textContent = n.d;
+    b.addEventListener("click", (e) => { e.stopPropagation(); openNode(n.id); });
+    canvas.appendChild(b);
+    elById.set(n.id, b);
+  }
+
+  // kenarları düğüm merkezleri arasında, dikey/yatay eğri ile çiz
+  const edgeEls = [];
+  for (const [a, bId, label] of EDGES) {
+    const A = byId.get(a), B = byId.get(bId);
+    if (!A || !B) continue;
+    const ax = A._x + A._w / 2, ay = A._y + A._h / 2;
+    const bx = B._x + B._w / 2, by = B._y + B._h / 2;
+    const dx = Math.abs(bx - ax), dy = Math.abs(by - ay);
+    const horiz = dx >= dy;
+    const c = horiz ? `${(ax + bx) / 2} ${ay}, ${(ax + bx) / 2} ${by}` : `${ax} ${(ay + by) / 2}, ${bx} ${(ay + by) / 2}`;
+    const p = document.createElementNS(svgNS, "path");
+    p.setAttribute("d", `M ${ax} ${ay} C ${c}, ${bx} ${by}`);
+    p.setAttribute("fill", "none");
+    p.setAttribute("stroke", "var(--muted)");
+    p.setAttribute("stroke-width", "1.3");
+    p.setAttribute("stroke-dasharray", "5 5");
+    p.setAttribute("opacity", ".55");
+    p.setAttribute("marker-end", "url(#ah)");
+    wires.appendChild(p);
+    edgeEls.push({ p, a, b: bId });
+    if (label) {
+      const t = document.createElementNS(svgNS, "text");
+      t.setAttribute("x", (ax + bx) / 2);
+      t.setAttribute("y", (ay + by) / 2 - 6);
+      t.setAttribute("text-anchor", "middle");
+      t.setAttribute("font-family", "var(--mono)");
+      t.setAttribute("font-size", "11");
+      t.setAttribute("fill", "var(--muted)");
+      t.textContent = label;
+      wires.appendChild(t);
+    }
+  }
+
+  // ── Lejant ────────────────────────────────────────────
+  const legend = document.getElementById("legend");
+  for (const k of Object.keys(S)) {
+    const s = document.createElement("span");
+    s.className = `b b-${S[k].cls}`;
+    s.textContent = S[k].label;
+    legend.appendChild(s);
+  }
+
+  // ── Bölge menüsü ──────────────────────────────────────
+  const jump = document.getElementById("jump");
+  for (const z of ZONES) {
+    const o = document.createElement("option");
+    o.value = z.id; o.textContent = z.t;
+    jump.appendChild(o);
+  }
+
+  // ── Pan / zoom ────────────────────────────────────────
+  const stage = document.getElementById("stage");
+  let scale = 1, tx = 0, ty = 0;
+  const MINS = 0.18, MAXS = 2.4;
+  const lvl = document.getElementById("lvl");
+
+  function apply() {
+    canvas.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    lvl.textContent = Math.round(scale * 100) + "%";
+  }
+  function clampScale(s) { return Math.min(MAXS, Math.max(MINS, s)); }
+
+  function zoomAt(cx, cy, factor) {
+    const ns = clampScale(scale * factor);
+    if (ns === scale) return;
+    tx = cx - (cx - tx) * (ns / scale);
+    ty = cy - (cy - ty) * (ns / scale);
+    scale = ns; apply();
+  }
+
+  function fit() {
+    const r = stage.getBoundingClientRect();
+    const s = clampScale(Math.min(r.width / (W + 80), r.height / (H + 80)));
+    scale = s;
+    tx = (r.width - W * s) / 2;
+    ty = (r.height - H * s) / 2;
+    apply();
+  }
+
+  function goZone(id) {
+    const z = zoneById.get(id);
+    if (!z) return;
+    const r = stage.getBoundingClientRect();
+    const s = clampScale(Math.min(r.width / (z.w + 140), r.height / (z.h + 140)));
+    scale = s;
+    tx = r.width / 2 - (z.x + z.w / 2) * s;
+    ty = r.height / 2 - (z.y + z.h / 2) * s;
+    apply();
+  }
+
+  jump.addEventListener("change", () => { if (jump.value) goZone(jump.value); });
+  document.getElementById("zin").addEventListener("click", () => {
+    const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25);
+  });
+  document.getElementById("zout").addEventListener("click", () => {
+    const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.25);
+  });
+  document.getElementById("zfit").addEventListener("click", fit);
+
+  stage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const r = stage.getBoundingClientRect();
+    const cx = e.clientX - r.left, cy = e.clientY - r.top;
+    if (e.ctrlKey || e.metaKey) { zoomAt(cx, cy, e.deltaY < 0 ? 1.12 : 1 / 1.12); }
+    else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { tx -= e.deltaX; apply(); }
+    else { zoomAt(cx, cy, e.deltaY < 0 ? 1.09 : 1 / 1.09); }
+  }, { passive: false });
+
+  // pointer ile sürükleme + iki parmak yakınlaştırma
+  const pts = new Map();
+  let last = null, pinch = null;
+  stage.addEventListener("pointerdown", (e) => {
+    stage.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) { last = { x: e.clientX, y: e.clientY }; stage.classList.add("grabbing"); }
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: scale };
+    }
+  });
+  stage.addEventListener("pointermove", (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 && pinch) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = stage.getBoundingClientRect();
+      const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top;
+      const target = clampScale(pinch.s * (d / pinch.d));
+      zoomAt(cx, cy, target / scale);
+      return;
+    }
+    if (pts.size === 1 && last) {
+      tx += e.clientX - last.x; ty += e.clientY - last.y;
+      last = { x: e.clientX, y: e.clientY };
+      apply();
+    }
+  });
+  const endPtr = (e) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 0) { last = null; stage.classList.remove("grabbing"); }
+  };
+  stage.addEventListener("pointerup", endPtr);
+  stage.addEventListener("pointercancel", endPtr);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target !== document.body && e.target.tagName !== "DIV") return;
+    const step = 90;
+    if (e.key === "ArrowLeft")  { tx += step; apply(); }
+    if (e.key === "ArrowRight") { tx -= step; apply(); }
+    if (e.key === "ArrowUp")    { ty += step; apply(); }
+    if (e.key === "ArrowDown")  { ty -= step; apply(); }
+    if (e.key === "0") fit();
+    if (e.key === "Escape") closeDrawer();
+  });
+
+  // ── Çekmece ───────────────────────────────────────────
+  const drawer = document.getElementById("drawer");
+  const dtitle = document.getElementById("dtitle");
+  const dbody = document.getElementById("dbody");
+  const dmeta = document.getElementById("dmeta");
+  let hotId = null;
+
+  function relatedOf(id) {
+    const set = new Set([id]);
+    for (const [a, b] of EDGES) { if (a === id) set.add(b); if (b === id) set.add(a); }
+    return set;
+  }
+
+  function openNode(id) {
+    const n = byId.get(id);
+    if (!n) return;
+    hotId = id;
+    dtitle.textContent = n.t;
+    dbody.innerHTML = n.body;
+    const z = zoneById.get(n.zone);
+    dmeta.innerHTML = "";
+    const b1 = document.createElement("span");
+    b1.className = `b b-${S[n.s].cls}`; b1.textContent = S[n.s].label;
+    dmeta.appendChild(b1);
+    const b2 = document.createElement("span");
+    b2.className = "b"; b2.style.color = "var(--muted)"; b2.textContent = z ? z.t : "";
+    dmeta.appendChild(b2);
+    drawer.classList.add("open");
+
+    const rel = relatedOf(id);
+    for (const [nid, el] of elById) {
+      el.classList.toggle("dim", !rel.has(nid));
+      el.classList.toggle("hot", nid === id);
+    }
+    for (const e of edgeEls) {
+      const on = e.a === id || e.b === id;
+      e.p.setAttribute("opacity", on ? "1" : ".12");
+      e.p.setAttribute("stroke", on ? "var(--tasarim)" : "var(--muted)");
+      e.p.setAttribute("stroke-width", on ? "2" : "1.3");
+    }
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove("open");
+    hotId = null;
+    for (const el of elById.values()) el.classList.remove("dim", "hot");
+    for (const e of edgeEls) {
+      e.p.setAttribute("opacity", ".55");
+      e.p.setAttribute("stroke", "var(--muted)");
+      e.p.setAttribute("stroke-width", "1.3");
+    }
+  }
+  document.getElementById("dclose").addEventListener("click", closeDrawer);
+  stage.addEventListener("click", (e) => { if (e.target === stage || e.target.classList.contains("zone")) closeDrawer(); });
+
+  fit();
+  window.addEventListener("resize", () => { if (scale < 0.25) fit(); });
+})();
+</script>

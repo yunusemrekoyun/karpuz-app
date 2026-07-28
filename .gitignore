@@ -1,0 +1,66 @@
+# --- Bağımlılıklar ---
+node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# --- Ortam değişkenleri: HİÇBİRİ repoya girmez (.example dahil) ---
+.env
+.env.*
+*.env
+!.env.d.ts
+
+# --- Anahtar / sertifika / kimlik dosyaları ---
+*.pem
+*.p8
+*.p12
+*.key
+*.keystore
+*.jks
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+credentials.json
+secrets.json
+*.local.sql
+*.local.json
+
+# --- Expo / React Native ---
+.expo/
+.expo-shared/
+dist/
+web-build/
+android/
+ios/
+*.orig.*
+*.jks
+
+# --- Derleme & önbellek ---
+build/
+.gradle/
+.metro-cache/
+*.tsbuildinfo
+coverage/
+
+# --- Ses veri seti (repoya ham kayıt girmez, ayrı depolanır) ---
+data/raw/
+data/recordings/
+*.wav
+*.m4a
+*.caf
+
+# --- Editör & işletim sistemi ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- AI aracı yerel dosyaları ---
+.claude/settings.local.json
+.cursor/
+.aider*
+*.ai-notes.md
+NOTLAR.md
+TODO.local.md
